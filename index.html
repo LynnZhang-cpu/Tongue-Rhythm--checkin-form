@@ -801,6 +801,28 @@
 
         ReactDOM.render(e(App), document.getElementById('root'));
     </script>
+    <!-- 底部 CTA：晚间节律评分（2分钟完成） -->
+<style>
+  @media print { #cta-evening { display:none; } }
+  #cta-evening {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 9999;
+    background: rgba(255,255,255,.95); border: 1px solid #e5e7eb; border-radius: 9999px;
+    box-shadow: 0 8px 18px rgba(2,6,23,.08); padding: 8px 10px;
+    font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    display: flex; align-items: center; gap: 8px;
+  }
+  #cta-evening a {
+    display: inline-block; background: #4f46e5; color: #fff; padding: 8px 12px; border-radius: 9999px;
+    font-size: 14px; text-decoration: none;
+  }
+  #cta-evening small { color:#64748b; font-size:12px; }
+</style>
+<div id="cta-evening" role="complementary" aria-label="晚间节律健康指数评分入口">
+  <small>晨舌打卡完成✅</small>
+  <a href="https://lynnzhang-cpu.github.io/https-lynnzhang-cpu.github.io-score.html-v-2025-10-27/"
+     aria-label="去填晚间节律健康指数评分表">晚间节律评分｜2分钟完成</a>
+</div>
+
 </body>
 </html>
 

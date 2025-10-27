@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#3b82f6">
+    <title>晨舌节律打卡表 (离线版)</title>
+    
+    <!-- 引入 React 和 ReactDOM CDN，这是为了保持文件体积合理，且浏览器通常会缓存。
+         注意：初次加载仍需网络，但文件本身不再需要 Babel 实时编译。 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- 引入 Tailwind CSS CDN，保持样式简洁和文件体积。
+         如果需要完全离线，需要将所有 Tailwind CSS 样式提取并内嵌到 <style> 标签中，这会使文件体积巨大。
+         目前保留 CDN，确保功能和样式完整。 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* 样式全部内嵌，但依赖 Tailwind 的类名 */
+        * { 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html, body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #EFF6FF 0%, #F3E8FF 50%, #FCE7F3 100%);
+            min-height: 100vh;
+        }
+        
+        /* 优化移动端输入框 */
+        input[type="text"], 
+        input[type="time"], 
+        input[type="number"],
+        textarea, 
+        select {
+            font-size: 16px !important;
+            padding: 12px !important;
+            border-radius: 12px !important;
+            border: 2px solid #e2e8f0 !important;
+            transition: all 0.2s;
+        }
+        
+        input[type="text"]:focus, 
+        input[type="time"]:focus,
+        input[type="number"]:focus,
+        textarea:focus, 
+        select:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+            outline: none;
+        }
+        
+        /* 优化滑块 */
+        input[type="range"] { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 100%;
+            height: 8px; 
+            border-radius: 4px; 
+            background: linear-gradient(to right, #ef4444, #eab308, #22c55e);
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 24px; 
+            height: 24px; 
+            border-radius: 50%; 
+            background: white;
+            border: 3px solid #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb { 
+            width: 24px; 
+            height: 24px; 
+            border-radius: 50%; 
+            background: white;
+            border: 3px solid #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        /* 优化复选框 */
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #3b82f6;
+        }
+        
+        /* 按钮优化 */
+        .btn {
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            user-select: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+        .btn-secondary:active {
+            background: #eff6ff;
+        }
+        
+        .btn-outline {
+            background: white;
+            color: #475569;
+            border: 2px solid #cbd5e1;
+        }
+        .btn-outline:active {
+            background: #f8fafc;
+        }
+        
+        /* 卡片样式 */
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        
+        /* 标签页 */
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+            cursor: pointer;
+            min-height: 44px;
+        }
+        
+        .tab-active {
+            background: linear-gradient(135deg, #3b82f6, #9333ea);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .tab-inactive {
+            background: white;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+        }
+        
+        /* 进度条 */
+        .progress-bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #9333ea);
+            transition: width 0.3s ease;
+        }
+        
+        /* 保存指示器 */
+        .save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 999;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* 标签组 */
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .tag {
+            padding: 8px 12px;
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        
+        .tag:active {
+            transform: scale(0.95);
+        }
+        
+        .tag.active {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
+            font-weight: 600;
+        }
+        
+        /* 容器 */
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 12px;
+        }
+        
+        @media (min-width: 768px) {
+            .container {
+                max-width: 640px;
+                padding: 16px;
+            }
+        }
+        
+        /* 响应式栅格 */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+        
+        @media (max-width: 480px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 状态徽章 */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        /* 安全区域 */
+        @supports (padding: max(0px)) {
+            body {
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        const { useState, useEffect, useCallback } = React;
+        const e = React.createElement; // 简化 createElement 调用
+
+        const todayStr = () => new Date().toISOString().slice(0, 10);
+        const STORAGE_KEY = 'tongue_rhythm_data';
+        const SAVE_DELAY = 1000; // 1秒后保存
+
+        const initDay = () => ({
+            date: "",
+            wakeTime: "",
+            sleepTime: "",
+            uploaded: false,
+            index: "",
+            advice: ["", "", ""],
+            tongue: { color: [], shape: [], coatThickness: [], coatQuality: [], note: "" },
+            actions: [],
+            mood: 3,
+            energy: 3,
+            digestion: 3,
+            review: { note1: "", note2: "" },
+        });
+
+        const defaultState = {
+            meta: { version: "v2.1 (自包含版)", owner: "Manus AI", created: todayStr() },
+            d1: initDay(),
+            d2: initDay(),
+            d3: initDay(),
+            summary: { keyfindings: "", habit7d: "", selfwords: "" },
+        };
+
+        // 本地存储管理
+        const useLocalStorage = (key, initialValue) => {
+            const [storedValue, setStoredValue] = useState(() => {
+                try {
+                    const item = window.localStorage.getItem(key);
+                    return item ? JSON.parse(item) : initialValue;
+                } catch (error) {
+                    console.error('读取本地存储失败:', error);
+                    return initialValue;
+                }
+            });
+
+            const saveTimeout = React.useRef(null);
+
+            const setValue = useCallback((value) => {
+                try {
+                    const valueToStore = value instanceof Function ? value(storedValue) : value;
+                    setStoredValue(valueToStore);
+                    
+                    // 防抖保存
+                    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+                    saveTimeout.current = setTimeout(() => {
+                        window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                    }, SAVE_DELAY);
+                } catch (error) {
+                    console.error('保存本地存储失败:', error);
+                }
+            }, [storedValue]);
+
+            return [storedValue, setValue];
+        };
+
+        // 舌象检查列表 (TongueChecklist Component)
+        const TongueChecklist = ({ day, onChange }) => {
+            const toggle = (field, value) => {
+                const set = new Set(day.tongue[field]);
+                set.has(value) ? set.delete(value) : set.add(value);
+                onChange({ ...day, tongue: { ...day.tongue, [field]: [...set] } });
+            };
+
+            const groups = [
+                { label: "舌色", field: "color", options: ["淡", "偏红", "暗/紫", "正常"] },
+                { label: "舌形", field: "shape", options: ["齿痕", "胖大", "偏薄", "裂纹"] },
+                { label: "舌苔厚薄", field: "coatThickness", options: ["薄", "中", "厚"] },
+                { label: "舌苔颜色/质地", field: "coatQuality", options: ["白", "黄", "腻", "干", "润"] },
+            ];
+
+            return e('div', { className: 'space-y-3' },
+                groups.map((g) => e('div', { key: g.field },
+                    e('div', { className: 'text-sm font-semibold text-slate-700 mb-2' }, g.label),
+                    e('div', { className: 'tag-group' },
+                        g.options.map((opt) => e('label', {
+                            key: opt,
+                            className: `tag ${day.tongue[g.field]?.includes(opt) ? 'active' : ''}`
+                        },
+                            e('input', {
+                                type: 'checkbox',
+                                checked: day.tongue[g.field]?.includes(opt),
+                                onChange: () => toggle(g.field, opt),
+                                style: { display: 'none' }
+                            }),
+                            opt
+                        ))
+                    )
+                )),
+                e('textarea', {
+                    className: 'w-full p-3 border-2 border-slate-200 rounded-lg text-base',
+                    placeholder: "备注：例如'边尖偏红、舌下青筋显'等",
+                    value: day.tongue.note,
+                    onChange: (ev) => onChange({ ...day, tongue: { ...day.tongue, note: ev.target.value } }),
+                    rows: "3"
+                })
+            );
+        };
+
+        // 情绪滑块 (MoodSlider Component)
+        const MoodSlider = ({ label, value, onChange, emoji = "" }) => {
+            const getColor = (v) => {
+                if (v <= 1) return '#ef4444';
+                if (v <= 2) return '#f97316';
+                if (v <= 3) return '#eab308';
+                if (v <= 4) return '#84cc16';
+                return '#22c55e';
+            };
+
+            return e('div', { className: 'space-y-2' },
+                e('div', { className: 'flex items-center justify-between' },
+                    e('span', { className: 'text-sm font-medium text-slate-700' }, `${emoji} ${label}`),
+                    e('span', { className: 'text-lg font-bold', style: { color: getColor(value) } }, value)
+                ),
+                e('input', {
+                    type: 'range',
+                    min: 0,
+                    max: 5,
+                    value: value,
+                    onChange: (ev) => onChange(Number(ev.target.value))
+                })
+            );
+        };
+
+        // 日期卡片 (DayCard Component)
+        const DayCard = ({ title, state, onChange, presets = [] }) => {
+            const calculateProgress = () => {
+                const fields = [
+                    state.date,
+                    state.wakeTime,
+                    state.sleepTime,
+                    state.index,
+                    state.advice.some(a => a),
+                    state.tongue.color.length > 0,
+                    state.actions.length > 0,
+                    state.review.note1,
+                ];
+                return Math.round((fields.filter(Boolean).length / fields.length) * 100);
+            };
+
+            const progress = calculateProgress();
+
+            return e('div', { className: 'card overflow-hidden' },
+                e('div', { className: 'bg-gradient-to-r from-blue-50 to-purple-50 p-4' },
+                    e('div', { className: 'flex items-center justify-between mb-2' },
+                        e('h3', { className: 'text-lg font-bold text-slate-800' }, title),
+                        e('span', { className: 'badge badge-info' }, `${progress}%`)
+                    ),
+                    e('div', { className: 'progress-bar' },
+                        e('div', { className: 'progress-fill', style: { width: `${progress}%` } })
+                    )
+                ),
+                e('div', { className: 'p-4 space-y-4' },
+                    // 基本信息
+                    e('div', null,
+                        e('h4', { className: 'text-sm font-semibold text-slate-700 mb-3' }, '📅 基本信息'),
+                        e('div', { className: 'grid-3' },
+                            e('div', null,
+                                e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '日期'),
+                                e('input', {
+                                    type: 'text',
+                                    placeholder: 'MM-DD',
+                                    value: state.date,
+                                    onChange: (ev) => onChange({ ...state, date: ev.target.value })
+                                })
+                            ),
+                            e('div', null,
+                                e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '起床'),
+                                e('input', {
+                                    type: 'time',
+                                    value: state.wakeTime,
+                                    onChange: (ev) => onChange({ ...state, wakeTime: ev.target.value })
+                                })
+                            ),
+                            e('div', null,
+                                e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '入睡'),
+                                e('input', {
+                                    type: 'time',
+                                    value: state.sleepTime,
+                                    onChange: (ev) => onChange({ ...state, sleepTime: ev.target.value })
+                                })
+                            )
+                        )
+                    ),
+                    // AI舌诊信息
+                    e('div', null,
+                        e('div', { className: 'flex items-center gap-2 mb-3' },
+                            e('input', {
+                                type: 'checkbox',
+                                checked: state.uploaded,
+                                onChange: (ev) => onChange({ ...state, uploaded: ev.target.checked }),
+                                id: `uploaded-${title}`
+                            }),
+                            e('label', { htmlFor: `uploaded-${title}`, className: 'text-sm font-medium text-slate-700 cursor-pointer' }, '✅ 已上传AI舌诊')
+                        ),
+                        e('div', { className: 'space-y-3' },
+                            e('div', null,
+                                e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '节律健康指数（0–100）'),
+                                e('input', {
+                                    type: 'number',
+                                    min: "0",
+                                    max: "100",
+                                    placeholder: '输入指数',
+                                    value: state.index,
+                                    onChange: (ev) => onChange({ ...state, index: ev.target.value })
+                                })
+                            ),
+                            e('div', null,
+                                e('label', { className: 'text-xs font-medium text-slate-600 block mb-2' }, '小程序给到的3条建议'),
+                                e('div', { className: 'space-y-2' },
+                                    state.advice.map((a, i) => e('input', {
+                                        key: i,
+                                        type: 'text',
+                                        placeholder: `建议 ${i + 1}`,
+                                        value: a,
+                                        onChange: (ev) => {
+                                            const list = [...state.advice];
+                                            list[i] = ev.target.value;
+                                            onChange({ ...state, advice: list });
+                                        }
+                                    }))
+                                )
+                            )
+                        )
+                    ),
+                    // 舌象观察
+                    e('div', null,
+                        e('h4', { className: 'text-sm font-semibold text-slate-700 mb-3' }, '👅 舌象观察'),
+                        e(TongueChecklist, { day: state, onChange: onChange })
+                    ),
+                    // 节律行动
+                    e('div', null,
+                        e('h4', { className: 'text-sm font-semibold text-slate-700 mb-3' }, '⚡ 今日节律行动（≤2项）'),
+                        e('div', { className: 'tag-group' },
+                            presets.map((p) => e('label', {
+                                key: p,
+                                className: `tag ${state.actions.includes(p) ? 'active' : ''}`
+                            },
+                                e('input', {
+                                    type: 'checkbox',
+                                    checked: state.actions.includes(p),
+                                    onChange: () => {
+                                        const set = new Set(state.actions);
+                                        set.has(p) ? set.delete(p) : set.add(p);
+                                        onChange({ ...state, actions: [...set] });
+                                    },
+                                    style: { display: 'none' }
+                                }),
+                                p
+                            ))
+                        )
+                    ),
+                    // 情绪与能量
+                    e('div', null,
+                        e('h4', { className: 'text-sm font-semibold text-slate-700 mb-3' }, '😊 情绪与能量（0–5分）'),
+                        e('div', { className: 'bg-slate-50 rounded-lg p-3 space-y-4' },
+                            e(MoodSlider, {
+                                label: '情绪平稳',
+                                value: state.mood,
+                                onChange: (v) => onChange({ ...state, mood: v }),
+                                emoji: '😊'
+                            }),
+                            e(MoodSlider, {
+                                label: '精力充沛',
+                                value: state.energy,
+                                onChange: (v) => onChange({ ...state, energy: v }),
+                                emoji: '⚡'
+                            }),
+                            e(MoodSlider, {
+                                label: '消化舒适',
+                                value: state.digestion,
+                                onChange: (v) => onChange({ ...state, digestion: v }),
+                                emoji: '🍽️'
+                            })
+                        )
+                    ),
+                    // 日间复盘
+                    e('div', null,
+                        e('h4', { className: 'text-sm font-semibold text-slate-700 mb-3' }, '📝 日间复盘'),
+                        e('div', { className: 'space-y-2' },
+                            e('textarea', {
+                                className: 'w-full p-3 border-2 border-slate-200 rounded-lg text-base',
+                                placeholder: '今天一个被看见的细节 / 完成的微行动',
+                                value: state.review.note1,
+                                onChange: (ev) => onChange({ ...state, review: { ...state.review, note1: ev.target.value } }),
+                                rows: "2"
+                            }),
+                            e('textarea', {
+                                className: 'w-full p-3 border-2 border-slate-200 rounded-lg text-base',
+                                placeholder: '体感变化（如睡眠/胃口/精神）或明日愿意继续的一件事',
+                                value: state.review.note2,
+                                onChange: (ev) => onChange({ ...state, review: { ...state.review, note2: ev.target.value } }),
+                                rows: "2"
+                            })
+                        )
+                    )
+                )
+            );
+        };
+
+        // App Component
+        function App() {
+            const [data, setData] = useLocalStorage(STORAGE_KEY, defaultState);
+            const [activeDay, setActiveDay] = useState("d1");
+            const [showSaveIndicator, setShowSaveIndicator] = useState(false);
+
+            // 显示保存指示器
+            useEffect(() => {
+                setShowSaveIndicator(true);
+                const timer = setTimeout(() => setShowSaveIndicator(false), 2000);
+                return () => clearTimeout(timer);
+            }, [data]);
+
+            const presetsD1 = ["晨光+温水300ml", "正午小憩10–20min", "23:00前入睡", "少冰冷/少夜宵", "5000+步"];
+            const presetsD2 = ["早醒后拉伸3min", "正午散步10min", "睡前热足/泡脚10min"];
+            const presetsD3 = ["晨间温水300ml", "晚餐7分饱", "睡前45分钟放下屏幕"];
+
+            const exportJSON = () => {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `晨舌节律打卡_${todayStr()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importJSON = () => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = ".json";
+                input.onchange = (ev) => {
+                    const file = ev.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const imported = JSON.parse(event.target.result);
+                                setData(imported);
+                                alert("✅ 数据导入成功！");
+                            } catch (err) {
+                                alert("❌ 导入失败：文件格式错误");
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+                };
+                input.click();
+            };
+
+            const reset = () => {
+                if (confirm("⚠️ 确定要清空所有数据吗？此操作不可恢复。")) {
+                    setData(defaultState);
+                    alert("✅ 数据已清空");
+                }
+            };
+
+            return e('div', { className: 'container' },
+                // 头部
+                e('header', { className: 'card mb-4 p-4 text-center' },
+                    e('h1', { className: 'text-2xl font-bold mb-1', style: {
+                        background: 'linear-gradient(135deg, #3b82f6, #9333ea)',
+                        backgroundClip: 'text',
+                        WebkitBackgroundClip: 'text',
+                        color: 'transparent'
+                    }}, '晨舌节律打卡表'),
+                    e('p', { className: 'text-sm text-slate-600' }, 'AI舌诊 + 节律觉醒入门工具'),
+                    e('p', { className: 'text-xs text-slate-500 mt-1' }, `版本 ${data.meta.version} · ${data.meta.owner}`)
+                ),
+                // 操作按钮
+                e('div', { className: 'flex gap-2 mb-4' },
+                    e('button', { onClick: exportJSON, className: 'btn btn-primary flex-1' }, '📥 导出'),
+                    e('button', { onClick: importJSON, className: 'btn btn-outline flex-1' }, '📤 导入'),
+                    e('button', { onClick: reset, className: 'btn btn-outline flex-1' }, '🔄 清空')
+                ),
+                // 使用说明
+                e('div', { className: 'card mb-4 overflow-hidden' },
+                    e('div', { className: 'bg-gradient-to-r from-amber-50 to-orange-50 p-3' },
+                        e('h3', { className: 'text-sm font-semibold' }, '📸 使用说明')
+                    ),
+                    e('div', { className: 'p-3 text-xs text-slate-700 space-y-2' },
+                        e('p', null, e('strong', null, '拍照时间：'), '每天起床后、刷牙前、喝水前；自然光下，放松伸舌3–5秒。'),
+                        e('p', null, e('strong', null, '拍照方法：'), '面向窗户或白墙；关闭美颜/滤镜；镜头距离15–20cm；轻伸舌，避免用力。'),
+                        e('p', null, e('strong', null, '记录方法：'), '先到AI舌诊小程序上传获取"节律健康指数+3条建议"，再填写本表。'),
+                        e('div', { style: { height: '1px', background: '#e2e8f0', margin: '8px 0' } }),
+                        e('p', { className: 'text-slate-500' }, '⚠️ 合规声明：本工具仅用于自我观察与生活方式建议，不构成诊断/处方。如有不适请就医。')
+                    )
+                ),
+                // 标签页
+                e('div', { className: 'flex gap-2 mb-4' },
+                    e('button', { onClick: () => setActiveDay("d1"), className: `tab-btn ${activeDay === "d1" ? "tab-active" : "tab-inactive"}` }, '第1天'),
+                    e('button', { onClick: () => setActiveDay("d2"), className: `tab-btn ${activeDay === "d2" ? "tab-active" : "tab-inactive"}` }, '第2天'),
+                    e('button', { onClick: () => setActiveDay("d3"), className: `tab-btn ${activeDay === "d3" ? "tab-active" : "tab-inactive"}` }, '第3天')
+                ),
+                // 日期卡片
+                e('div', { className: 'mb-4' },
+                    activeDay === "d1" && e(DayCard, { title: "第1天（D1）", state: data.d1, onChange: (v) => setData({ ...data, d1: v }), presets: presetsD1 }),
+                    activeDay === "d2" && e(DayCard, { title: "第2天（D2）", state: data.d2, onChange: (v) => setData({ ...data, d2: v }), presets: presetsD2 }),
+                    activeDay === "d3" && e(DayCard, { title: "第3天（D3）", state: data.d3, onChange: (v) => setData({ ...data, d3: v }), presets: presetsD3 })
+                ),
+                // 三日复盘
+                e('div', { className: 'card mb-4 overflow-hidden' },
+                    e('div', { className: 'bg-gradient-to-r from-green-50 to-teal-50 p-3' },
+                        e('h3', { className: 'text-sm font-semibold' }, '📊 三日对比复盘')
+                    ),
+                    e('div', { className: 'p-4 space-y-3' },
+                        e('div', null,
+                            e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '我在3天里看见了…'),
+                            e('textarea', {
+                                className: 'w-full p-3 border-2 border-slate-200 rounded-lg text-base',
+                                placeholder: '记录你的观察和发现',
+                                value: data.summary.keyfindings,
+                                onChange: (ev) => setData({ ...data, summary: { ...data.summary, keyfindings: ev.target.value } }),
+                                rows: "3"
+                            })
+                        ),
+                        e('div', null,
+                            e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '最想继续的1个节律习惯（准备做7天挑战）'),
+                            e('input', {
+                                type: 'text',
+                                placeholder: '例如：23:00前入睡',
+                                value: data.summary.habit7d,
+                                onChange: (ev) => setData({ ...data, summary: { ...data.summary, habit7d: ev.target.value } })
+                            })
+                        ),
+                        e('div', null,
+                            e('label', { className: 'text-xs font-medium text-slate-600 block mb-1' }, '想对自己说的一句话'),
+                            e('input', {
+                                type: 'text',
+                                placeholder: '给自己的鼓励或提醒',
+                                value: data.summary.selfwords,
+                                onChange: (ev) => setData({ ...data, summary: { ...data.summary, selfwords: ev.target.value } })
+                            })
+                        )
+                    )
+                ),
+                // 评分参考
+                e('div', { className: 'card mb-4 overflow-hidden' },
+                    e('div', { className: 'bg-gradient-to-r from-indigo-50 to-blue-50 p-3' },
+                        e('h3', { className: 'text-sm font-semibold' }, '📋 节律健康指数评分参考')
+                    ),
+                    e('div', { className: 'p-3 text-xs text-slate-700 space-y-2' },
+                        e('div', { className: 'bg-blue-50 rounded-lg p-2' },
+                            e('p', { className: 'font-medium' }, '总分：100分'),
+                            e('p', { className: 'text-slate-600' }, '≥60分较稳 | 80+优秀 | ＜50建议重点调频')
+                        ),
+                        e('div', null,
+                            e('p', { className: 'font-medium mb-1' }, 'A. 节律行为（60分）'),
+                            e('ul', { className: 'space-y-0.5 text-slate-600', style: { paddingLeft: '12px' } },
+                                e('li', null, '• 睡眠时点（20分）：23:00前=20；23:00-23:30=15；23:30-24:00=10；＞24:00=5'),
+                                e('li', null, '• 起床稳定性（10分）：偏差≤±15min=10；±30min=7；±60min=4；＞60min=1'),
+                                e('li', null, '• 早间节律（10分）：晨光+温水全得=10；其一=5'),
+                                e('li', null, '• 午间修复（10分）：小憩或步行=10；其一=5'),
+                                e('li', null, '• 夜间收尾（10分）：放屏幕+拉伸/泡脚全得=10；其一=5')
+                            )
+                        ),
+                        e('div', null,
+                            e('p', { className: 'font-medium mb-1' }, 'B. 体感自评（20分）'),
+                            e('p', { className: 'text-slate-600', style: { paddingLeft: '12px' } }, '情绪(0-5)×2 + 精力(0-5)×1 + 消化(0-5)×1')
+                        ),
+                        e('div', null,
+                            e('p', { className: 'font-medium mb-1' }, 'C. 舌象与趋势（20分）'),
+                            e('ul', { className: 'space-y-0.5 text-slate-600', style: { paddingLeft: '12px' } },
+                                e('li', null, '• 舌苔厚薄改善/稳定（0-8分）'),
+                                e('li', null, '• 湿浊/腻象减轻（0-6分）'),
+                                e('li', null, '• 边尖红/瘀点减少（0-6分）')
+                            )
+                        )
+                    )
+                ),
+                // 页脚
+                e('footer', { className: 'text-center text-xs text-slate-500 pb-4' },
+                    e('p', null, `版本：${data.meta.version} | 创建日期：${data.meta.created}`),
+                    e('p', { className: 'mt-1' }, '本表为冷启动承接用"工具型素材"'),
+                    e('p', { className: 'mt-2 text-amber-600' }, '💡 提示：数据已自动保存到本地')
+                ),
+                // 保存指示器
+                showSaveIndicator && e('div', { className: 'save-indicator' }, '✅ 数据已保存')
+            );
+        }
+
+        ReactDOM.render(e(App), document.getElementById('root'));
+    </script>
+</body>
+</html>
+
